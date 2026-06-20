@@ -13,8 +13,34 @@ import seaborn as sns
 ## Loading the Dataset
 Load the dataset and clearly define the `target_5yrs` column as the dependent variable
 
-#### Load the Housing dataset
+#### Load the dataset
 data = pd.read_csv('nba_players.csv')
+
+## Add a visualization (e.g., sns.countplot) to check the distribution of 'target_5yrs'.
+plt.figure(figsize=(6, 4))
+sns.countplot(x='target_5yrs', data=data, hue='target_5yrs', palette='viridis', legend=False)
+plt.title('Distribution of Target_5yrs (Career Longevity)')
+plt.xlabel('Played 5+ years in NBA (0=No, 1=Yes)')
+plt.ylabel('Number of Players')
+plt.show()
+
+<img width="540" height="393" alt="feature_engr_dist" src="https://github.com/user-attachments/assets/ef590bd7-eaf9-4b06-9664-b8a5d9ea4d23" />
+
+## Check for class balance/distribution of the target variable.
+## Checking Class Balance of Target Variable
+We will visualize the distribution of the `target_5yrs` column to understand the balance between the two classes (players who played 5+ years in NBA vs. those who did not). This is important for evaluating model performance, especially if the classes are imbalanced.
+plt.figure(figsize=(7, 5))
+sns.countplot(x='target_5yrs', data=data, hue='target_5yrs', palette='coolwarm', legend=False)
+plt.title('Distribution of Target_5yrs (Career Longevity)')
+plt.xlabel('Played 5+ years in NBA (0=No, 1=Yes)')
+plt.ylabel('Number of Players')
+plt.show()
+
+#### Also print the value counts for a numerical summary
+print("\nValue counts for 'target_5yrs':")
+print(data['target_5yrs'].value_counts())
+
+<img width="618" height="470" alt="feature_engr_dist_career" src="https://github.com/user-attachments/assets/f4c0e09e-a9a0-4651-aae0-b2eaaf943eb0" />
 
 ## Drop non-predictive columns (e.g., player names, IDs) that add noise or risk data leakage
 X = data.drop(columns=["Unnamed: 0", "name", "target_5yrs"])
@@ -66,6 +92,26 @@ print("Cleaned X_test shape:", X_test_cleaned.shape)
 X_train = X_train_cleaned
 X_test = X_test_cleaned
 
+## Feature Scaling
+Implementing feature scaling using `sklearn.preprocessing.StandardScaler`. Scaling is performed after splitting the data to ensure that the scaling parameters are learned only from the training data, preventing data leakage from the test set.
+from sklearn.preprocessing import StandardScaler
+
+#### Initialize the StandardScaler
+scaler = StandardScaler()
+
+#### Fit the scaler on the training data and transform both training and test data
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
+#### Convert the scaled arrays back to DataFrames, preserving column names
+X_train = pd.DataFrame(X_train_scaled, columns=X_train.columns, index=X_train.index)
+X_test = pd.DataFrame(X_test_scaled, columns=X_test.columns, index=X_test.index)
+
+print("X_train after scaling:")
+display(X_train.head())
+print("\nX_test after scaling:")
+display(X_test.head())
+
 ### Engineer at least one new composite feature (e.g., Points Per Minute, Efficiency Rating) by combining existing metrics
 ### Engineering New Composite Features
 We will create two new composite features to provide more insights into player performance:
@@ -114,6 +160,7 @@ print(X_train.isnull().sum())
 print("\nNull values in X_test after cleaning:")
 print(X_test.isnull().sum())
 
+
 ## Documentation of Feature Selection and Engineering Choices
 
 Throughout the data preparation phase, we made several deliberate choices regarding feature selection and engineering to enhance our model's performance and interpretability:
@@ -134,12 +181,16 @@ Throughout the data preparation phase, we made several deliberate choices regard
 
 ### 3. Feature Engineering (Creating Composite Metrics)
 -   **Action**: We created two new composite features:
-    -   `atr` (Assist/Turnover Ratio): `ast / tov`
+    -   `atr` (Assist/Turnover Ratio): Conditionally calculated as `ast / tov` if both 'ast' and 'tov' columns are present. If 'tov' or 'ast' is missing (e.g., due to previous feature dropping), `atr` is set to 0 to avoid errors.
     -   `rpm` (Rebounds Per Minute): `(oreb + dreb) / min`
 -   **Rationale**: These features were engineered to provide more meaningful insights into player performance by combining existing raw statistics. They represent efficiency metrics that are often more indicative of a player's true impact than their raw counts:
-    -   `atr`: A higher ratio indicates a player's ability to facilitate scoring opportunities while minimizing ball-handling mistakes.
+    -   `atr`: A higher ratio indicates a player's ability to facilitate scoring opportunities while minimizing ball-handling mistakes. The conditional calculation ensures robustness even if base columns are removed.
     -   `rpm`: This normalizes a player's rebounding ability by their playing time, giving a clearer picture of their rebounding efficiency.
 
 ### 4. Handling Null Values
 -   **Action**: We checked for and handled any null values in the feature sets (`X_train`, `X_test`).
 -   **Rationale**: Missing values can cause errors or unexpected behavior in many machine learning algorithms. Although our dataset fortunately had no missing values after previous steps, this is a crucial step to ensure data quality and model readiness.
+
+### 5. Checking Class Balance of Target Variable
+-   **Action**: We visualized the distribution of `target_5yrs` using a `countplot` and printed its value counts.
+-   **Rationale**: Understanding the distribution of the target variable is crucial for classification tasks. An imbalanced class distribution (where one class significantly outnumbers the other) can lead to models that perform well on the majority class but poorly on the minority class. This initial check helps inform potential strategies for handling class imbalance, such as oversampling, undersampling, or using specific evaluation metrics.
